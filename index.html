@@ -287,9 +287,8 @@
 /**
  * --- 認証設定 ---
  */
-const AUTH_USER = "admin";
-// 設定したいパスワードのハッシュ値をここに貼り付けてください
-const targetHash = "ef92b778bafe771e89245b89ec8c9914c0350c71cc17424fbb45ed844d01492a";
+const AUTH_USER = "eggman0128#";
+const target = "1077d4dde627cbe9f643b0420d213093c90bc8f5fb73c97f5231210d8fc55e17";
 
 /**
  * 文字列をSHA-256ハッシュに変換する
@@ -316,7 +315,7 @@ window.attemptLogin = async function() {
     const hashedInput = await sha256(pass);
 
     // 以前のバージョンにあった console.log(hashedInput) 等を削除しました
-    if (user === AUTH_USER && hashedInput === targetHash) {
+    if (user === AUTH_USER && hashedInput === target) {
         document.getElementById('auth-overlay').style.display = "none";
         document.getElementById('main-content').style.display = "block";
         initApp();
