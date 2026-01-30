@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Wood Dashboard</title>
+    <style>
+        :root {
+            --wood-dark: #3d2b1f;
+            --wood-medium: #5d4037;
+            --wood-light: #d7b494;
+            --paper-color: #fdfcf0;
+            --accent: #d32f2f;
+            --priority-high: #ff5252;
+            --priority-med: #ffb142;
+            --priority-low: #34ace0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+            background-color: #4a3728;
+            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern-with-twigs.png');
+            color: var(--wood-dark);
+            min-height: 100vh;
+        }
+
+        /* Login Modal Styles */
+        #auth-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .auth-card {
+            background: var(--paper-color);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 300px;
+            text-align: center;
+        }
+
+        .auth-card h2 { margin-top: 0; color: var(--wood-dark); font-size: 1.2rem; }
+        .auth-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .auth-card button {
+            width: 100%;
+            padding: 10px;
+            background: var(--wood-medium);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #auth-error { color: var(--accent); font-size: 0.8rem; margin-top: 10px; display: none; }
+
+        /* Main Dashboard Layout */
+        #main-content {
+            display: none;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header.clock-section {
+            text-align: center;
+            color: var(--paper-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+
+        #clock { font-size: 4rem; font-weight: bold; line-height: 1; margin-bottom: 5px; }
+        #date-info { font-size: 1.4rem; opacity: 0.9; margin-bottom: 10px; }
+
+        .weather-grid {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .weather-item {
+            background: rgba(0,0,0,0.4);
+            padding: 8px 12px;
+            border-radius: 8px;
+            min-width: 60px;
+            backdrop-filter: blur(5px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 25px;
+        }
+
+        @media (max-width: 1100px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        .widget {
+            background: var(--paper-color);
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        h3 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--wood-light);
+            padding-bottom: 8px;
+            font-size: 1.1rem;
+            color: var(--wood-medium);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #focus-task-container {
+            background: #fff9c4;
+            border: 2px solid var(--priority-high);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        #focus-task-title { font-size: 1.2rem; font-weight: bold; color: var(--accent); display: block; }
+        #focus-task-deadline { font-size: 0.85rem; color: #555; display: block; margin-top: 5px; }
+
+        .task-input { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.03); padding: 10px; border-radius: 4px; }
+        .task-input input[type="text"], .task-input textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+        .task-input textarea { height: 60px; resize: vertical; font-size: 0.85rem; }
+        .task-input-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        .task-input select, .task-input input[type="time"], .task-input input[type="date"] { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; }
+        .task-input button { background: var(--wood-medium); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: auto; }
+
+        #task-list-items { list-style: none; padding: 0; }
+        #task-list-items li {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .task-main-row { display: flex; align-items: center; width: 100%; }
+        .task-desc { font-size: 0.8rem; color: #666; padding-left: 28px; margin-top: 5px; white-space: pre-wrap; line-height: 1.4; }
+        .priority-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
+        .prio-3 { background-color: var(--priority-high); }
+        .prio-2 { background-color: var(--priority-med); }
+        .prio-1 { background-color: var(--priority-low); }
+        .task-done { text-decoration: line-through; opacity: 0.5; }
+        .task-meta { font-size: 0.7rem; color: #666; margin-left: auto; text-align: right; }
+
+        #quick-memo {
+            width: 100%; height: 120px; border: 1px solid #d7b494; background-color: #fffde7;
+            padding: 10px; font-family: inherit; font-size: 0.9rem; resize: none; border-radius: 4px; box-sizing: border-box;
+        }
+
+        #gdoc-iframe { border-radius: 4px; background: white; border: 1px solid #ccc; width: 100%; }
+        #gdoc-selector { width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+
+        .routine-list { list-style: none; padding: 0; }
+        .routine-list li { padding: 10px; border-bottom: 1px dashed #ccc; }
+        .phase-btn { width: 100%; padding: 12px; background: var(--wood-dark); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        #pomo-timer-display { font-size: 3rem; font-family: monospace; background: #222; color: #ff5252; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; }
+        .pomo-controls { display: flex; justify-content: center; gap: 10px; }
+        .pomo-controls button { padding: 8px 15px; cursor: pointer; border-radius: 4px; border: none; background: var(--wood-medium); color: white; }
+
+        .links-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+        .links-grid a, .single-link {
+            display: block; font-size: 0.8rem; padding: 8px; background: #fff; border: 1px solid #ddd;
+            text-decoration: none; color: var(--wood-dark); text-align: center; border-radius: 4px;
+        }
+        .link-category h4 { margin: 15px 0 5px 0; font-size: 0.9rem; border-left: 4px solid var(--wood-medium); padding-left: 8px; }
+    </style>
+</head>
+<body>
+
+<!-- Custom Auth Overlay -->
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2>Dashboard Login</h2>
+        <input type="text" id="auth-username" placeholder="ユーザー名">
+        <input type="password" id="auth-password" placeholder="パスワード">
+        <button id="login-btn" onclick="window.attemptLogin()">ログイン</button>
+        <div id="auth-error">IDまたはパスワードが違います</div>
+        <div style="font-size: 0.6rem; color: #999; margin-top: 15px;">※安全のためパスワードはハッシュ化されています</div>
+    </div>
+</div>
+
+<div class="dashboard-container" id="main-content">
+    <header class="clock-section">
+        <div id="clock">00:00:00</div>
+        <div id="date-info">...</div>
+        <div id="weather-forecast" class="weather-grid">天気情報を取得中...</div>
+    </header>
+
+    <div class="main-layout">
+        <main class="content-column">
+            <section class="widget" id="phase-widget">
+                <h3 id="phase-title">ルーチン</h3>
+                <div id="phase-content"></div>
+            </section>
+
+            <section class="widget">
+                <h3>Google ツール</h3>
+                <select id="gdoc-selector" onchange="window.updateDoc()"></select>
+                <iframe id="gdoc-iframe" src="" height="650px"></iframe>
+                <div id="gdoc-status" style="font-size: 0.7rem; color: #888; margin-top: 5px;">※表示されない場合は「公開」設定を確認してください</div>
+            </section>
+        </main>
+
+        <aside class="side-column">
+            <section class="widget">
+                <h3>ポモドーロ</h3>
+                <div id="pomo-timer-display">25:00</div>
+                <div class="pomo-controls">
+                    <button id="pomo-toggle-btn" onclick="window.togglePomo()">開始</button>
+                    <button onclick="window.resetPomo()">リセット</button>
+                </div>
+                <div style="text-align:center; font-size: 0.8rem; margin-top:10px;">
+                    完了: <span id="pomo-completed-count">0</span> セット
+                </div>
+            </section>
+
+            <section class="widget">
+                <h3>最優先</h3>
+                <div id="focus-task-container">
+                    <span id="focus-task-title">なし</span>
+                    <small id="focus-task-deadline"></small>
+                </div>
+            </section>
+
+            <section class="widget">
+                <h3>タスクリスト</h3>
+                <div class="task-input">
+                    <input type="text" id="new-task-title" placeholder="タスク名">
+                    <textarea id="new-task-desc" placeholder="タスクの説明（メモ）を入力..."></textarea>
+                    <div class="task-input-row">
+                        <input type="date" id="new-task-date">
+                        <input type="time" id="new-task-time">
+                    </div>
+                    <div class="task-input-row">
+                        <select id="new-task-priority">
+                            <option value="1">低</option>
+                            <option value="2" selected>中</option>
+                            <option value="3">高</option>
+                        </select>
+                        <button onclick="window.addTask()">追加</button>
+                    </div>
+                </div>
+                <ul id="task-list-items"></ul>
+            </section>
+
+            <section class="widget">
+                <h3>メモ</h3>
+                <textarea id="quick-memo" placeholder="メモ..." oninput="window.saveMemo()"></textarea>
+            </section>
+
+            <section class="widget">
+                <h3>リンク集</h3>
+                <div id="links-container"></div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+/**
+ * --- 認証設定 ---
+ */
+const AUTH_USER = "admin";
+// 設定したいパスワードのハッシュ値をここに貼り付けてください
+const targetHash = "ef92b778bafe771e89245b89ec8c9914c0350c71cc17424fbb45ed844d01492a";
+
+/**
+ * 文字列をSHA-256ハッシュに変換する
+ */
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+window.attemptLogin = async function() {
+    const userField = document.getElementById('auth-username');
+    const passField = document.getElementById('auth-password');
+    const loginBtn = document.getElementById('login-btn');
+    const errorEl = document.getElementById('auth-error');
+    
+    const user = userField.value;
+    const pass = passField.value;
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "検証中...";
+
+    const hashedInput = await sha256(pass);
+
+    // 以前のバージョンにあった console.log(hashedInput) 等を削除しました
+    if (user === AUTH_USER && hashedInput === targetHash) {
+        document.getElementById('auth-overlay').style.display = "none";
+        document.getElementById('main-content').style.display = "block";
+        initApp();
+    } else {
+        errorEl.style.display = "block";
+        loginBtn.disabled = false;
+        loginBtn.textContent = "ログイン";
+        // 失敗時の警告表示も削除しました
+    }
+};
+
+// Enterキーでログイン
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none') {
+        window.attemptLogin();
+    }
+});
+
+// State & Config
+let state = { tasks: [], memo: '', morningDone: false, morningChecks: {}, nightChecks: {}, pomoCount: 0, currentPhase: 'none', lastDate: new Date().toDateString() };
+const LAT = 40.60, LON = 140.46;
+const MORNING_LIST = [ { id: 'm1', text: '健康観察フォーム入力' }, { id: 'm2', text: '着替え' }, { id: 'm3', text: '企画準備' }, { id: 'm4', text: '1時間目の準備' } ];
+const NIGHT_LIST = [ { id: 'n1', text: 'アラーム設定' }, { id: 'n2', text: '明日の服を準備' }, { id: 'n3', text: 'ChromeBook充電' }, { id: 'n4', text: '弁当箱を出す' }, { id: 'n5', text: '筆箱の移動' } ];
+const RAW_DOCS = [
+    { title: "集合連絡表", url: "https://docs.google.com/spreadsheets/d/1sWcqdtG6Ovz9ad_npJvk3M3-iMzv5MBlmDRfttZ-rtA/edit" },
+    { title: "連絡事項メモ", url: "https://docs.google.com/document/d/1BIfjoMIbbVrcXY67bLtNiWkUkk3rqBffjak-FHtv88Y/edit" },
+    { title: "予定表Aun", url: "https://docs.google.com/spreadsheets/d/1Aun-zkL9iJBeaTcehK08YZyOdwbHvVlB51oFsLR_deg/edit" }
+];
+const LINK_DATA = [
+    { title: "Fボード", url: "https://sites.google.com/fuchu.edu.hirosaki-u.ac.jp/f-1a2025vod/" },
+    { title: "ふりかえり", url: "https://docs.google.com/forms/d/e/1FAIpQLSf1_PS8bcfkUM9xqteR-mm7kqNiJfoAZozbAsktY2D7CxpiNA/viewform" },
+    { title: "Gmail", url: "https://mail.google.com/mail/u/0/" },
+    {
+        category: "Google Classroom",
+        links: [
+            { title: "1A", url: "https://classroom.google.com/c/NzUzNDg2OTA4Njk2" },
+            { title: "1学年", url: "https://classroom.google.com/c/Njk4NzU0OTEyNTQ2" },
+            { title: "卓球部", url: "https://classroom.google.com/c/ODI5MjA1MDM1NDBa" },
+            { title: "国語", url: "https://classroom.google.com/c/NzYyNzUyNjgyMzkw" },
+            { title: "数学", url: "https://classroom.google.com/c/NzYyNzMyODM2Nzc5" },
+            { title: "英語", url: "https://classroom.google.com/c/Njk4NTY4MTE5OTc2" }
+        ]
+    }
+];
+
+// Functions
+function saveToStorage() { localStorage.setItem('my_dashboard_v6', JSON.stringify(state)); }
+function restoreFromStorage() {
+    const data = localStorage.getItem('my_dashboard_v6');
+    if (data) state = Object.assign(state, JSON.parse(data));
+}
+
+function updateClock() {
+    const c = document.getElementById('clock'), d = document.getElementById('date-info');
+    if (!c || !d) return;
+    const now = new Date();
+    c.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
+    d.textContent = now.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+
+async function updateWeather() {
+    const el = document.getElementById('weather-forecast');
+    try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m&forecast_days=1`);
+        const data = await res.json();
+        let html = '';
+        [9, 12, 15, 18, 21].forEach(h => {
+            if (data.hourly) html += `<div class="weather-item"><div>${h}:00</div><div style="font-weight:bold">${Math.round(data.hourly.temperature_2m[h])}°</div></div>`;
+        });
+        el.innerHTML = html;
+    } catch (e) { el.textContent = "天気情報なし"; }
+}
+
+window.addTask = function() {
+    const t = document.getElementById('new-task-title');
+    if (!t || !t.value.trim()) return;
+    state.tasks.push({
+        id: Date.now(), title: t.value.trim(), desc: document.getElementById('new-task-desc').value.trim(),
+        priority: parseInt(document.getElementById('new-task-priority').value, 10),
+        date: document.getElementById('new-task-date').value,
+        deadline: document.getElementById('new-task-time').value, completed: false
+    });
+    t.value = ''; document.getElementById('new-task-desc').value = '';
+    saveToStorage(); renderTasks();
+};
+
+function renderTasks() {
+    const list = document.getElementById('task-list-items');
+    if (!list) return;
+    list.innerHTML = '';
+    const sorted = [...state.tasks].sort((a, b) => (a.completed - b.completed) || (b.priority - a.priority));
+    const focus = sorted.find(t => !t.completed);
+    document.getElementById('focus-task-title').textContent = focus ? focus.title : "なし";
+    document.getElementById('focus-task-deadline').textContent = (focus && focus.deadline) ? `〆 ${focus.deadline}` : "";
+
+    sorted.forEach(t => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="task-main-row ${t.completed?'task-done':''}">
+                <div class="priority-dot prio-${t.priority}"></div>
+                <input type="checkbox" ${t.completed?'checked':''} onchange="window.toggleTask(${t.id})">
+                <span style="flex-grow:1; margin-left:8px;">${t.title}</span>
+                <span class="task-meta">${t.deadline||''}</span>
+                <button onclick="window.deleteTask(${t.id})" style="color:red; border:none; background:none; cursor:pointer; margin-left:10px;">×</button>
+            </div>
+            ${t.desc ? `<div class="task-desc">${t.desc}</div>` : ''}
+        `;
+        list.appendChild(li);
+    });
+}
+
+window.toggleTask = function(id) { const t = state.tasks.find(x => x.id === id); if (t) t.completed = !t.completed; saveToStorage(); renderTasks(); };
+window.deleteTask = function(id) { state.tasks = state.tasks.filter(x => x.id !== id); saveToStorage(); renderTasks(); };
+window.saveMemo = function() { state.memo = document.getElementById('quick-memo').value; saveToStorage(); };
+
+function updatePhase() {
+    const h = new Date().getHours(), c = document.getElementById('phase-content'), t = document.getElementById('phase-title');
+    if (!c || !t) return;
+    c.innerHTML = '';
+    if (h < 9 && !state.morningDone) {
+        t.textContent = "☀ モーニング"; renderChecklist(c, MORNING_LIST, 'morningChecks', true);
+    } else if (h >= 21) {
+        t.textContent = "🌙 ナイトルーチン"; renderChecklist(c, NIGHT_LIST, 'nightChecks', false);
+    } else {
+        t.textContent = "☕ 日中の活動"; c.innerHTML = '<p style="text-align:center; opacity:0.6; padding:20px 0;">お疲れ様です！</p>';
+    }
+}
+
+function renderChecklist(c, list, key, btn) {
+    const ul = document.createElement('ul'); ul.className = 'routine-list';
+    list.forEach(item => {
+        const li = document.createElement('li');
+        li.innerHTML = `<label style="display:flex; align-items:center; cursor:pointer;"><input type="checkbox" ${state[key][item.id]?'checked':''} style="margin-right:10px;"> ${item.text}</label>`;
+        li.querySelector('input').onchange = (e) => { state[key][item.id] = e.target.checked; saveToStorage(); };
+        ul.appendChild(li);
+    });
+    c.appendChild(ul);
+    if (btn) {
+        const b = document.createElement('button'); b.className = 'phase-btn'; b.textContent = '完了';
+        b.style.marginTop = '10px'; b.onclick = () => { state.morningDone = true; saveToStorage(); updatePhase(); };
+        c.appendChild(b);
+    }
+}
+
+let pomoTimer = null, pomoLeft = 1500, pomoRunning = false;
+window.togglePomo = function() {
+    const b = document.getElementById('pomo-toggle-btn');
+    if (pomoRunning) { clearInterval(pomoTimer); pomoRunning = false; b.textContent = "開始"; }
+    else {
+        pomoRunning = true; b.textContent = "停止";
+        pomoTimer = setInterval(() => {
+            if (pomoLeft > 0) { pomoLeft--; renderPomo(); }
+            else { clearInterval(pomoTimer); pomoRunning = false; state.pomoCount++; document.getElementById('pomo-completed-count').textContent = state.pomoCount; pomoLeft = 1500; b.textContent = "開始"; saveToStorage(); renderPomo(); }
+        }, 1000);
+    }
+};
+window.resetPomo = function() { clearInterval(pomoTimer); pomoRunning = false; pomoLeft = 1500; document.getElementById('pomo-toggle-btn').textContent = "開始"; renderPomo(); };
+function renderPomo() { const el = document.getElementById('pomo-timer-display'); const m = Math.floor(pomoLeft/60), s = pomoLeft%60; el.textContent = `${m}:${String(s).padStart(2,'0')}`; }
+
+window.updateDoc = function() {
+    const sel = document.getElementById('gdoc-selector'), fr = document.getElementById('gdoc-iframe');
+    const doc = RAW_DOCS[sel.value];
+    if (doc) fr.src = doc.url.split('/edit')[0] + '/preview';
+};
+
+function renderLinks() {
+    const c = document.getElementById('links-container');
+    LINK_DATA.forEach(item => {
+        if (item.url) {
+            const a = document.createElement('a'); a.href = item.url; a.target = "_blank"; a.className = "single-link"; a.style.marginBottom = "5px"; a.textContent = item.title; c.appendChild(a);
+        } else {
+            const d = document.createElement('div'); d.className = 'link-category'; d.innerHTML = `<h4>${item.category}</h4>`;
+            const g = document.createElement('div'); g.className = 'links-grid';
+            item.links.forEach(l => { const la = document.createElement('a'); la.href = l.url; la.target = "_blank"; la.textContent = l.title; g.appendChild(la); });
+            d.appendChild(g); c.appendChild(d);
+        }
+    });
+}
+
+function initApp() {
+    restoreFromStorage();
+    if (state.lastDate !== new Date().toDateString()) { state.morningDone = false; state.morningChecks = {}; state.nightChecks = {}; state.pomoCount = 0; state.lastDate = new Date().toDateString(); saveToStorage(); }
+    document.getElementById('gdoc-selector').innerHTML = RAW_DOCS.map((d, i) => `<option value="${i}">${d.title}</option>`).join('');
+    document.getElementById('quick-memo').value = state.memo || '';
+    document.getElementById('pomo-completed-count').textContent = state.pomoCount;
+    updateClock(); setInterval(updateClock, 1000); updateWeather(); renderTasks(); updatePhase(); renderLinks(); window.updateDoc();
+}
+
+document.addEventListener('DOMContentLoaded', () => document.getElementById('auth-username').focus());
+</script>
+</body>
+</html>
